@@ -19,11 +19,11 @@ private val Context.chatDataStore: DataStore<Preferences> by preferencesDataStor
 class DataStoreChatStore(context: Context) : ChatStore {
     private val dataStore = context.chatDataStore
     private val json = Json { ignoreUnknownKeys = true }
+    private val messageListSerializer = ListSerializer(ChatMessage.serializer())
 
     companion object {
         private val KEY_MESSAGES = stringPreferencesKey("messages_json")
         private val KEY_NEXT_ID = longPreferencesKey("next_id")
-        private val messageListSerializer = ListSerializer(ChatMessage.serializer())
     }
 
     override fun observeMessages(): Flow<List<ChatMessage>> =
