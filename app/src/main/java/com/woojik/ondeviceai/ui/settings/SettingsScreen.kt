@@ -1,5 +1,7 @@
 package com.woojik.ondeviceai.ui.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -7,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,7 +32,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.woojik.ondeviceai.OnDeviceAiApplication
 import com.woojik.ondeviceai.data.model.DarkThemeMode
 
-/** 설정 화면: 테마 모드 선택, 캐릭터 이름 변경 */
+/** 설정 화면: 테마 모드 선택, 캐릭터 이름 변경, 로컬 모델 가져오기 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
@@ -37,6 +40,13 @@ fun SettingsScreen(onBack: () -> Unit) {
     val locator = (context.applicationContext as OnDeviceAiApplication).locator
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.factory(locator))
     val settings by viewModel.settings.collectAsState()
+    val modelState by viewModel.modelState.collectAsState()
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) viewModel.importModel(uri)
+    }
 
     var nameInput by remember { mutableStateOf("") }
     LaunchedEffect(settings.characterName) {
@@ -76,6 +86,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     Text(mode.label())
                 }
             }
+
             OutlinedTextField(
                 value = nameInput,
                 onValueChange = { nameInput = it },
@@ -93,6 +104,47 @@ fun SettingsScreen(onBack: () -> Unit) {
                 enabled = nameInput.isNotBlank(),
             ) {
                 Text("저장")
+            }
+
+            Text(
+                text = "로컬 모델",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(top = 24.dp),
+            )
+            when (val state = modelState) {
+                is SettingsViewModel.ModelState.Active -> Text(
+                    text = if (state.isLocal) {
+                        "사용 중: " + state.modelName
+                    } else {
+                        "로컬 모델 없음 — 개발용 에코 모델 사용 중"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+                is SettingsViewModel.ModelState.Importing -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                    Text(
+                        text = "모델 복사 중이에요. 파일이 클 경우 몇 분 걸릴 수 있어요.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                is SettingsViewModel.ModelState.Failed -> Text(
+                    text = state.message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+            }
+            Button(
+                onClick = { importLauncher.launch(arrayOf("*/*")) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                enabled = modelState !is SettingsViewModel.ModelState.Importing,
+            ) {
+                Text("모델 파일 가져오기 (.task/.bin/.gguf)")
             }
         }
     }
