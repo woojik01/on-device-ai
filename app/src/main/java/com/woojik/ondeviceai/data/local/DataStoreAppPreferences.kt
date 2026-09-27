@@ -20,21 +20,22 @@ class DataStoreAppPreferences(context: Context) : AppPreferences {
 
     companion object {
         private val KEY_SETTINGS = stringPreferencesKey("settings_json")
+        private val settingsSerializer = AppSettings.serializer()
     }
 
     override fun observeSettings(): Flow<AppSettings> =
         dataStore.data.map { prefs ->
             prefs[KEY_SETTINGS]?.let { raw ->
-                runCatching { json.decodeFromString<AppSettings>(raw) }.getOrNull()
+                runCatching { json.decodeFromString(settingsSerializer, raw) }.getOrNull()
             } ?: AppSettings()
         }
 
     override suspend fun updateSettings(transform: (AppSettings) -> AppSettings) {
         dataStore.edit { prefs ->
             val current = prefs[KEY_SETTINGS]?.let { raw ->
-                runCatching { json.decodeFromString<AppSettings>(raw) }.getOrNull()
+                runCatching { json.decodeFromString(settingsSerializer, raw) }.getOrNull()
             } ?: AppSettings()
-            prefs[KEY_SETTINGS] = json.encodeToString(transform(current))
+            prefs[KEY_SETTINGS] = json.encodeToString(settingsSerializer, transform(current))
         }
     }
 }
