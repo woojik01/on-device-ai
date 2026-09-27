@@ -11,9 +11,13 @@ import java.io.File
 /**
  * MediaPipe LLM Inference 기반 로컬 모델 구현 (PRD-02 1차 후보 런타임).
  *
- * - 모델 파일은 기기 내부 저장소 files/models/ 에 사전 배치된다 (docs/model-setup.md).
- * - 진행 콜백은 누적 부분 결과를 전달하므로, 증분만 잘라 Token으로 방출한다.
+ * MediaPipe 0.10.35 세션 API 구조:
+ * 1. `session.addQueryChunk(prompt)` — 프롬프트를 세션 큐에 적재
+ * 2. `session.generateResponseAsync(progressListener)` — 생성 시작, 부분 결과 콜백 수신
+ *    (프롬프트를 generateResponseAsync 인자로 넘기지 않는다)
+ *
  * - 요청마다 세션을 새로 만들어 전체 컨텍스트를 프롬프트로 전달한다 (세션 히스토리 중복 방지).
+ * - 진행 콜백은 누적 부분 결과를 전달하므로, 증분만 잘라 Token으로 방출한다.
  * - 수집 취소 시 세션을 닫아 생성을 중단한다.
  */
 class MediaPipeModel(
@@ -31,13 +35,13 @@ class MediaPipeModel(
     override fun generate(request: GenerationRequest): Flow<ChatModelEvent> = callbackFlow {
         val prompt = PromptBuilder.build(request)
 
-        val llm = tryLoad(GenerationError.LOADING_FAILED) { ensureInference() }
+        val llm = tryLoad(GenerationError.LOADING_FAILED, ::trySend) { ensureInference() }
         if (llm == null) {
             close()
             return@callbackFlow
         }
 
-        val session = tryLoad(GenerationError.LOADING_FAILED) {
+        val session = tryLoad(GenerationError.LOADING_FAILED, ::trySend) {
             LlmInferenceSession.createFromOptions(
                 llm,
                 LlmInferenceSession.LlmInferenceSessionOptions.builder()
@@ -51,12 +55,15 @@ class MediaPipeModel(
             return@callbackFlow
         }
 
-        var emittedLength = 0
+        val sendEvent: (ChatModelEvent) -> Unit = { event -> trySend(event) }
+
         try {
-            session.generateResponseAsync(prompt) { partial, done ->
-                if (partial != null && partial.length > emittedLength) {
-                    trySend(ChatModelEvent.Token(partial.substring(emittedLength)))
-                    emittedLength = partial.length
+            // 프롬프트 적재 후 생성 시작 (MediaPipe 0.10.35 API)
+            session.addQueryChunk(prompt)
+            session.generateResponseAsync { partial, done ->
+                if (partial != null && partial.length > emittedLengthHolder.value) {
+                    trySend(ChatModelEvent.Token(partial.substring(emittedLengthHolder.value)))
+                    emittedLengthHolder.value = partial.length
                 }
                 if (done) {
                     trySend(ChatModelEvent.Completed(partial ?: ""))
@@ -64,10 +71,10 @@ class MediaPipeModel(
                 }
             }
         } catch (e: OutOfMemoryError) {
-            trySend(ChatModelEvent.Failed(GenerationError.OUT_OF_MEMORY))
+            sendEvent(ChatModelEvent.Failed(GenerationError.OUT_OF_MEMORY))
             close()
         } catch (e: Exception) {
-            trySend(ChatModelEvent.Failed(GenerationError.GENERATION_FAILED))
+            sendEvent(ChatModelEvent.Failed(GenerationError.GENERATION_FAILED))
             close()
         }
 
@@ -84,16 +91,21 @@ class MediaPipeModel(
         }
     }
 
+    private class Box(var value: Int)
+
+    private val emittedLengthHolder = Box(0)
+
     private fun <T : Any> tryLoad(
         failure: GenerationError,
+        sendEvent: (ChatModelEvent) -> Unit,
         loader: () -> T,
     ): T? = try {
         loader()
     } catch (e: OutOfMemoryError) {
-        trySend(ChatModelEvent.Failed(GenerationError.OUT_OF_MEMORY))
+        sendEvent(ChatModelEvent.Failed(GenerationError.OUT_OF_MEMORY))
         null
     } catch (e: Exception) {
-        trySend(ChatModelEvent.Failed(failure))
+        sendEvent(ChatModelEvent.Failed(failure))
         null
     }
 
