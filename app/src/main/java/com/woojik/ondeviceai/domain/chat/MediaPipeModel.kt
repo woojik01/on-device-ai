@@ -49,19 +49,13 @@ class MediaPipeModel(
         var emittedLength = 0
 
         try {
-            // MediaPipe LLM Inference: 프롬프트는 generateResponseAsync()에 직접 전달한다.
-            session.generateResponseAsync(prompt) { partial, done ->
-                if (partial != null && partial.length > emittedLength) {
-                    trySend(
-                        ChatModelEvent.Token(
-                            partial.substring(emittedLength),
-                        ),
-                    )
-                    emittedLength = partial.length
+            // MediaPipe Session API: query chunk를 먼저 추가한 뒤 async generation을 시작한다.
+            session.addQueryChunk(prompt)
+            session.generateResponseAsync { partial, done ->
+                if (partial != null && partial.isNotEmpty()) {
+                    trySend(ChatModelEvent.Token(partial))
                 }
-
                 if (done) {
-                    trySend(ChatModelEvent.Completed(partial ?: ""))
                     close()
                 }
             }
