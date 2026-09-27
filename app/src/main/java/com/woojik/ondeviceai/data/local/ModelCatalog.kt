@@ -18,6 +18,6 @@ class ModelCatalog(
 
     companion object {
         const val MODELS_DIR_NAME = "models"
-        val SUPPORTED_EXTENSIONS = setOf("task", "bin", "gguf")
+        val SUPPORTED_EXTENSIONS = setOf("task")
     }
 }
