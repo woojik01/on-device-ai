@@ -8,16 +8,17 @@ PRD 문서는 [`docs/prd/`](docs/prd/) 참조.
 
 - ~~PRD-01 Android 앱 기반~~ — 완료 (S22 실기 확인 완료)
 - **PRD-02 대화 엔진** — 진행 중
-  - `ChatModel` 모델 추상화 (로컬 LLM 교체 가능, [후보/벤치마크 계획](docs/model-candidates.md))
-  - 스트리밍 응답, 생성 중 표시, 생성 취소, 오류 처리
-  - 현재는 개발용 `EchoModel` 임시 구현 → 벤치마크 후 로컬 모델 확정 예정
+  - `ChatModel` 모델 추상화 + 스트리밍 응답/취소/오류 처리 (완료)
+  - 로컬 런타임 1차 후보 **MediaPipe LLM Inference** 통합 완료 (`MediaPipeModel`)
+  - 모델 파일이 기기에 있으면 로컬 추론, 없으면 개발용 `EchoModel` 폴백 ([모델 배치 가이드](docs/model-setup.md))
+  - 남은 작업: S22 실측 벤치마크 → 최종 모델 확정 ([후보/벤치마크 계획](docs/model-candidates.md))
 
 ## 기술 스택
 
 - Kotlin, Jetpack Compose, Material 3
 - ViewModel 기반 상태 관리, 패키지별 기능 분리 (`data` / `ui` / `domain`)
 - 로컬 저장 계층 추상화 (`ChatStore`, `AppPreferences` — 이후 SQLite로 교체 가능)
-- 모델 추상화 (`ChatModel` — 로컬 LLM 교체 가능)
+- 모델 추상화 (`ChatModel`) + MediaPipe LLM Inference 기반 로컬 추론 (`tasks-genai`)
 - AGP 8.5 / Gradle 8.7 / JDK 17
 
 ## 빌드
