@@ -55,15 +55,15 @@ class MediaPipeModel(
             return@callbackFlow
         }
 
-        val sendEvent: (ChatModelEvent) -> Unit = { event -> trySend(event) }
+        var emittedLength = 0
 
         try {
             // 프롬프트 적재 후 생성 시작 (MediaPipe 0.10.35 API)
             session.addQueryChunk(prompt)
             session.generateResponseAsync { partial, done ->
-                if (partial != null && partial.length > emittedLengthHolder.value) {
-                    trySend(ChatModelEvent.Token(partial.substring(emittedLengthHolder.value)))
-                    emittedLengthHolder.value = partial.length
+                if (partial != null && partial.length > emittedLength) {
+                    trySend(ChatModelEvent.Token(partial.substring(emittedLength)))
+                    emittedLength = partial.length
                 }
                 if (done) {
                     trySend(ChatModelEvent.Completed(partial ?: ""))
@@ -71,10 +71,10 @@ class MediaPipeModel(
                 }
             }
         } catch (e: OutOfMemoryError) {
-            sendEvent(ChatModelEvent.Failed(GenerationError.OUT_OF_MEMORY))
+            trySend(ChatModelEvent.Failed(GenerationError.OUT_OF_MEMORY))
             close()
         } catch (e: Exception) {
-            sendEvent(ChatModelEvent.Failed(GenerationError.GENERATION_FAILED))
+            trySend(ChatModelEvent.Failed(GenerationError.GENERATION_FAILED))
             close()
         }
 
@@ -90,10 +90,6 @@ class MediaPipeModel(
             inference = null
         }
     }
-
-    private class Box(var value: Int)
-
-    private val emittedLengthHolder = Box(0)
 
     private fun <T : Any> tryLoad(
         failure: GenerationError,
