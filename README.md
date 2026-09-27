@@ -6,15 +6,18 @@ PRD 문서는 [`docs/prd/`](docs/prd/) 참조.
 
 ## 현재 단계
 
-- **PRD-01 Android 앱 기반** — 진행 중
-  - 메인 채팅 화면 / 설정 화면 / 다크·라이트 테마 / 기본 상태 저장 (DataStore)
-  - AI 응답은 아직 구현하지 않는다.
+- ~~PRD-01 Android 앱 기반~~ — 완료 (S22 실기 확인 완료)
+- **PRD-02 대화 엔진** — 진행 중
+  - `ChatModel` 모델 추상화 (로컬 LLM 교체 가능, [후보/벤치마크 계획](docs/model-candidates.md))
+  - 스트리밍 응답, 생성 중 표시, 생성 취소, 오류 처리
+  - 현재는 개발용 `EchoModel` 임시 구현 → 벤치마크 후 로컬 모델 확정 예정
 
 ## 기술 스택
 
 - Kotlin, Jetpack Compose, Material 3
-- ViewModel 기반 상태 관리, 패키지별 기능 분리 (`data` / `ui`)
+- ViewModel 기반 상태 관리, 패키지별 기능 분리 (`data` / `ui` / `domain`)
 - 로컬 저장 계층 추상화 (`ChatStore`, `AppPreferences` — 이후 SQLite로 교체 가능)
+- 모델 추상화 (`ChatModel` — 로컬 LLM 교체 가능)
 - AGP 8.5 / Gradle 8.7 / JDK 17
 
 ## 빌드
