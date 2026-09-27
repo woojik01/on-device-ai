@@ -40,7 +40,7 @@ class ServiceLocator(private val application: Application) {
         private set
 
     /** 엔진은 매 생성 시점에 현재 모델을 조회하므로 재생성이 필요 없다. */
-    val conversationEngine: ConversationEngine = ConversationEngine(modelProvider = { chatModel })
+    val conversationEngine: ConversationEngine = ConversationEngine(chatModel)
 
     /** 모델 가져오기 후 호출: 최신 모델 파일로 교체한다. */
     fun reloadModel() {
