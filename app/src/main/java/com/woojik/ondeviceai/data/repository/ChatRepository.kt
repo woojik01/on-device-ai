@@ -6,8 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * 대화 도메인 로직.
- * PRD-01에서는 AI 응답 없이 사용자 입력을 저장·조회만 한다.
- * 이후 단계에서 응답 생성(로컬 LLM)을 여기에 연결한다.
+ * PRD-02부터 사용자 입력과 AI 응답을 모두 저장한다.
  */
 class ChatRepository(private val store: ChatStore) {
 
@@ -19,6 +18,18 @@ class ChatRepository(private val store: ChatStore) {
             text = text.trim(),
             timestampMillis = now,
             nextId = nextId,
+        )
+        store.appendMessage(message)
+        return message
+    }
+
+    /** AI(캐릭터) 응답 메시지를 저장한다. */
+    suspend fun appendCharacterMessage(text: String, now: Long, nextId: Long): ChatMessage {
+        val message = ChatMessage(
+            id = nextId,
+            role = ChatMessage.Role.CHARACTER,
+            text = text,
+            timestampMillis = now,
         )
         store.appendMessage(message)
         return message
