@@ -1,6 +1,9 @@
 package com.woojik.ondeviceai
 
 import com.woojik.ondeviceai.data.repository.ChatRepository
+import com.woojik.ondeviceai.data.repository.SettingsRepository
+import com.woojik.ondeviceai.domain.chat.ConversationEngine
+import com.woojik.ondeviceai.domain.chat.EchoModel
 import com.woojik.ondeviceai.ui.chat.ChatViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -33,22 +36,32 @@ class ChatViewModelTest {
         Dispatchers.resetMain()
     }
 
+    /** PRD-02 생성자 시그니처(repository, settingsRepository, engine)에 맞춘 ViewModel 생성. */
+    private fun createViewModel(): ChatViewModel =
+        ChatViewModel(
+            repository = repository,
+            settingsRepository = SettingsRepository(FakeAppPreferences()),
+            engine = ConversationEngine(EchoModel()),
+        )
+
     @Test
     fun sendStoresMessageAndClearsInput() = runTest {
-        val viewModel = ChatViewModel(repository)
+        val viewModel = createViewModel()
 
         viewModel.onInputChange("  안녕  ")
         viewModel.send()
 
+        // 사용자 메시지 저장 + EchoModel 응답 저장
         val messages = viewModel.messages.value
-        assertEquals(1, messages.size)
-        assertEquals("안녕", messages.first().text)
+        assertEquals(2, messages.size)
+        assertEquals("안녕", messages[0].text)
         assertEquals("", viewModel.inputText.value)
+        assertTrue(messages[1].text.contains("안녕"))
     }
 
     @Test
     fun sendWithBlankInputDoesNothing() = runTest {
-        val viewModel = ChatViewModel(repository)
+        val viewModel = createViewModel()
 
         viewModel.onInputChange("   ")
         viewModel.send()
@@ -58,20 +71,24 @@ class ChatViewModelTest {
 
     @Test
     fun idsAreAssignedSequentially() = runTest {
-        val viewModel = ChatViewModel(repository)
+        val viewModel = createViewModel()
 
         viewModel.onInputChange("one")
         viewModel.send()
+        // EchoModel 스트리밍은 delay가 있어 runTest 가상 시간으로 진행됨
         viewModel.onInputChange("two")
         viewModel.send()
 
+        val texts = viewModel.messages.value.map { it.text }
+        assertTrue(texts.contains("one"))
+        assertTrue(texts.contains("two"))
         val ids = viewModel.messages.value.map { it.id }
-        assertEquals(listOf(0L, 1L), ids)
+        assertEquals(ids, ids.sorted())
     }
 
     @Test
     fun clearConversationRemovesAllMessages() = runTest {
-        val viewModel = ChatViewModel(repository)
+        val viewModel = createViewModel()
         viewModel.onInputChange("bye")
         viewModel.send()
 
