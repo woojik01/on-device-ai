@@ -46,19 +46,16 @@ class MediaPipeModel(
             return@callbackFlow
         }
 
-        var emittedLength = 0
-
         try {
-            // MediaPipe Session API: query chunk를 먼저 추가한 뒤 async generation을 시작한다.
             session.addQueryChunk(prompt)
-            session.generateResponseAsync { partial, done ->
-                if (partial != null && partial.isNotEmpty()) {
+            val future = session.generateResponseAsync { partial ->
+                if (partial.isNotEmpty()) {
                     trySend(ChatModelEvent.Token(partial))
                 }
-                if (done) {
-                    close()
-                }
             }
+            future.get()
+            trySend(ChatModelEvent.Completed(""))
+            close()
         } catch (e: OutOfMemoryError) {
             trySend(ChatModelEvent.Failed(GenerationError.OUT_OF_MEMORY))
             close()
