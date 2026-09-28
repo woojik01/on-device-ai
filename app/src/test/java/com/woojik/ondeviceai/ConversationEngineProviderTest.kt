@@ -33,7 +33,7 @@ class ConversationEngineProviderTest {
     @Test
     fun swappedModelIsUsedOnNextGeneration() = runTest {
         var model: ChatModel = CompletedModel("first")
-        val engine = ConversationEngine { model }
+        val engine = ConversationEngine(modelProvider = { model })
 
         engine.generateReply(emptyList(), AppSettings(), "hi").test {
             assertEquals("first", (awaitItem() as ChatModelEvent.Completed).fullText)

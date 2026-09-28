@@ -43,14 +43,15 @@ class ServiceLocator(private val application: Application) {
      * provider로 현재 모델을 조회한다. 모델 가져오기(reloadModel) 후
      * 다음 생성부터 새 모델이 사용된다 (생성 시점 값 고정 방지).
      */
-    val conversationEngine: ConversationEngine = ConversationEngine { chatModel }
+    val conversationEngine: ConversationEngine = ConversationEngine(modelProvider = { chatModel })
 
     /** 모델 가져오기 후 호출: 최신 모델 파일로 교체한다. */
     fun reloadModel() {
         chatModel = loadModel()
     }
 
-    private fun loadModel(): ChatModel =
+    private fun load
+Model(): ChatModel =
         modelCatalog.findModelFile()
             ?.let { MediaPipeModel(application, it.absolutePath) }
             ?: EchoModel()
