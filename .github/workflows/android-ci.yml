@@ -27,6 +27,25 @@ jobs:
       - name: Unit tests
         run: gradle testDebugUnitTest --no-daemon
 
+      - name: Publish failed test details
+        if: failure()
+        run: |
+          echo "=== FAILED TESTS ==="
+          find app/build/test-results -name "*.xml" | while read -r f; do
+            if grep -q 'failures="[1-9]' "$f"; then
+              echo ""
+              echo "--- $f ---"
+              cat "$f"
+            fi
+          done
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: app/build/test-results
+
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon
 
