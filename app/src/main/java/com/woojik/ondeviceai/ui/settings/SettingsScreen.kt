@@ -123,6 +123,17 @@ fun SettingsScreen(onBack: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
+                is SettingsViewModel.ModelState.Downloading -> {
+                    Text(
+                        text = "모델 다운로드 중... " + state.progress + "% (약 1.3GB)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                    LinearProgressIndicator(
+                        progress = { state.progress / 100f },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 is SettingsViewModel.ModelState.Importing -> {
                     CircularProgressIndicator(
                         modifier = Modifier.padding(vertical = 8.dp),
@@ -132,38 +143,6 @@ fun SettingsScreen(onBack: () -> Unit) {
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                is SettingsViewModel.ModelState.Downloading -> {
-                    if (state.progressPercent != null) {
-                        LinearProgressIndicator(
-                            progress = { state.progressPercent / 100f },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                        )
-                        Text(
-                            text = "모델 다운로드 중이에요... " + state.progressPercent + "%",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    } else {
-                        LinearProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                        )
-                        Text(
-                            text = "모델 다운로드 중이에요. (약 2.6GB, Wi-Fi 권장)",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                    OutlinedButton(
-                        onClick = { viewModel.cancelDownload() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                    ) {
-                        Text("다운로드 취소")
-                    }
-                }
                 is SettingsViewModel.ModelState.Failed -> Text(
                     text = state.message,
                     color = MaterialTheme.colorScheme.error,
@@ -171,26 +150,24 @@ fun SettingsScreen(onBack: () -> Unit) {
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
             }
-
             Button(
-                onClick = { viewModel.downloadModel() },
+                onClick = { viewModel.downloadDefaultModel() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp),
-                enabled = modelState !is SettingsViewModel.ModelState.Downloading &&
-                    modelState !is SettingsViewModel.ModelState.Importing,
+                enabled = modelState !is SettingsViewModel.ModelState.Downloading,
             ) {
-                Text("모델 자동 다운로드 (Gemma 4 E2B, 약 2.6GB)")
+                Text("모델 자동 다운로드 (Gemma 2B, 약 1.3GB)")
             }
-            Button(
+            OutlinedButton(
                 onClick = { importLauncher.launch(arrayOf("*/*")) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 4.dp),
-                enabled = modelState !is SettingsViewModel.ModelState.Downloading &&
-                    modelState !is SettingsViewModel.ModelState.Importing,
+                enabled = modelState !is SettingsViewModel.ModelState.Importing &&
+                    modelState !is SettingsViewModel.ModelState.Downloading,
             ) {
-                Text("파일로 직접 가져오기 (.litertlm/.task/.bin/.gguf)")
+                Text("파일에서 가져오기 (.task/.bin/.gguf)")
             }
         }
     }

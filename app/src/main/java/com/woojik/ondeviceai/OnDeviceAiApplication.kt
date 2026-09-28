@@ -13,7 +13,6 @@ import com.woojik.ondeviceai.data.repository.SettingsRepository
 import com.woojik.ondeviceai.domain.chat.ChatModel
 import com.woojik.ondeviceai.domain.chat.ConversationEngine
 import com.woojik.ondeviceai.domain.chat.EchoModel
-import com.woojik.ondeviceai.domain.chat.LiteRtModel
 import com.woojik.ondeviceai.domain.chat.MediaPipeModel
 import java.io.File
 
@@ -34,19 +33,18 @@ class ServiceLocator(private val application: Application) {
     /** 기기 내 파일(다운로드 등)을 앱 내부 저장소로 가져온다. */
     val modelImporter = ModelImporter(application, modelsDir)
 
-    /** 로컬 모델 자동 다운로드 (설정 화면, Wi-Fi 권장). */
+    /** 외부 URL에서 모델을 직접 다운로드한다. */
     val modelDownloader = ModelDownloader(modelsDir)
 
     /**
-     * 기기 내부 저장소의 로컬 모델을 확장자에 맞는 런타임으로 구동한다.
-     * .litertlm → LiteRT-LM (1차 후보), .task/.bin/.gguf → MediaPipe LLM Inference (2차 후보).
-     * 모델이 없으면 개발용 EchoModel로 폴백한다 (docs/model-setup.md).
+     * 기기에 배치된 로컬 모델(.task/.bin/.gguf)이 있으면 MediaPipe LLM Inference로 구동한다.
+     * 없으면 개발용 EchoModel로 폴백한다 (docs/model-setup.md).
      */
     var chatModel: ChatModel = loadModel()
         private set
 
     /**
-     * provider로 현재 모델을 조회한다. 모델 다운로드/가져오기(reloadModel) 후
+     * provider로 현재 모델을 조회한다. 모델 교체(reloadModel) 후
      * 다음 생성부터 새 모델이 사용된다 (생성 시점 값 고정 방지).
      */
     val conversationEngine: ConversationEngine = ConversationEngine(modelProvider = { chatModel })
@@ -57,12 +55,9 @@ class ServiceLocator(private val application: Application) {
     }
 
     private fun loadModel(): ChatModel =
-        modelCatalog.findModelFile()?.let { file ->
-            when (file.extension.lowercase()) {
-                ModelCatalog.EXT_LITERTLM -> LiteRtModel(application, file.absolutePath)
-                else -> MediaPipeModel(application, file.absolutePath)
-            }
-        } ?: EchoModel()
+        modelCatalog.findModelFile()
+            ?.let { MediaPipeModel(application, it.absolutePath) }
+            ?: EchoModel()
 }
 
 class OnDeviceAiApplication : Application() {
