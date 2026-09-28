@@ -228,7 +228,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 Text("파일로 직접 가져오기 (.litertlm/.task/.bin/.gguf)")
             }
 
-            if (crashLog != null) {
+            crashLog?.let { log ->
                 Text(
                     text = "마지막 비정상 종료 로그",
                     style = MaterialTheme.typography.titleMedium,
@@ -236,7 +236,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     modifier = Modifier.padding(top = 24.dp),
                 )
                 Text(
-                    text = crashLog,
+                    text = log,
                     style = MaterialTheme.typography.bodySmall,
                     fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.error,
