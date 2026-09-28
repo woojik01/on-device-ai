@@ -8,13 +8,21 @@ import com.woojik.ondeviceai.data.local.DataStoreChatStore
 import com.woojik.ondeviceai.data.local.ModelCatalog
 import com.woojik.ondeviceai.data.local.ModelDownloader
 import com.woojik.ondeviceai.data.local.ModelImporter
+import com.woojik.ondeviceai.data.model.ModelBackend
 import com.woojik.ondeviceai.data.repository.ChatRepository
 import com.woojik.ondeviceai.data.repository.SettingsRepository
 import com.woojik.ondeviceai.domain.chat.ChatModel
 import com.woojik.ondeviceai.domain.chat.ConversationEngine
 import com.woojik.ondeviceai.domain.chat.EchoModel
+import com.woojik.ondeviceai.domain.chat.LiteRtModel
 import com.woojik.ondeviceai.domain.chat.MediaPipeModel
 import java.io.File
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 /**
  * 간단한 수동 의존성 컨테이너.
@@ -37,7 +45,16 @@ class ServiceLocator(private val application: Application) {
     val modelDownloader = ModelDownloader(modelsDir)
 
     /**
-     * 기기 내부 저장소의 로컬 모델을 MediaPipe LLM Inference로 구동한다.
+     * 로컬 모델(.litertlm) 실행 백엔드. 설정 화면에서 CPU/GPU를 선택한다.
+     * GPU 변형 모델과 CPU 변형 모델은 파일이 다르므로 전환 시 재다운로드가 필요하다.
+     */
+    @Volatile
+    var modelBackend: ModelBackend = ModelBackend.CPU
+        private set
+
+    /**
+     * 기기 내부 저장소의 로컬 모델을 확장자에 맞는 런타임으로 구동한다.
+     * .litertlm → LiteRT-LM (기본, CPU/GPU 선택), .task/.bin/.gguf → MediaPipe (CPU).
      * 모델이 없으면 개발용 EchoModel로 폴백한다 (docs/model-setup.md).
      */
     var chatModel: ChatModel = loadModel()
@@ -54,18 +71,40 @@ class ServiceLocator(private val application: Application) {
         chatModel = loadModel()
     }
 
+    /** 백엔드(CPU/GPU) 변경: LiteRT-LM 모델을 새 백엔드로 다시 로드한다. */
+    fun setModelBackend(backend: ModelBackend) {
+        if (modelBackend == backend) return
+        modelBackend = backend
+        if (modelCatalog.findModelFile()?.extension?.lowercase() == ModelCatalog.EXT_LITERTLM) {
+            reloadModel()
+        }
+    }
+
     private fun loadModel(): ChatModel =
-        modelCatalog.findModelFile()
-            ?.let { file -> MediaPipeModel(application, file.absolutePath) }
-            ?: EchoModel()
+        modelCatalog.findModelFile()?.let { file ->
+            when (file.extension.lowercase()) {
+                ModelCatalog.EXT_LITERTLM ->
+                    LiteRtModel(application, file.absolutePath, useGpu = modelBackend == ModelBackend.GPU)
+                else -> MediaPipeModel(application, file.absolutePath)
+            }
+        } ?: EchoModel()
 }
 
 class OnDeviceAiApplication : Application() {
     lateinit var locator: ServiceLocator
         private set
 
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override fun onCreate() {
         super.onCreate()
         locator = ServiceLocator(this)
+        // 저장된 백엔드 설정(CPU/GPU)을 모델 로드에 반영한다.
+        appScope.launch {
+            locator.settingsRepository.observeSettings()
+                .map { it.modelBackend }
+                .distinctUntilChanged()
+                .collect { backend -> locator.setModelBackend(backend) }
+        }
     }
 }

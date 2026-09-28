@@ -26,10 +26,10 @@ class ModelCatalogTest {
     }
 
     @Test
-    fun `bin 모델 파일을 인식한다`() {
-        tempDir.newFile("gemma-2b-it-cpu-int4.bin")
+    fun `litertlm 모델 파일을 인식한다`() {
+        tempDir.newFile("gemma-4-E2B-it.litertlm")
         val catalog = ModelCatalog(tempDir.root)
-        assertEquals("gemma-2b-it-cpu-int4.bin", catalog.findModelFile()?.name)
+        assertEquals("gemma-4-E2B-it.litertlm", catalog.findModelFile()?.name)
     }
 
     @Test

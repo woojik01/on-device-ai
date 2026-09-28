@@ -3,6 +3,7 @@ package com.woojik.ondeviceai.ui.settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -33,8 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.woojik.ondeviceai.OnDeviceAiApplication
 import com.woojik.ondeviceai.data.model.DarkThemeMode
+import com.woojik.ondeviceai.data.model.ModelBackend
 
-/** 설정 화면: 테마 모드 선택, 캐릭터 이름 변경, 로컬 모델 다운로드/가져오기 */
+/** 설정 화면: 테마 모드 선택, 캐릭터 이름 변경, 로컬 모델 백엔드 선택/다운로드/가져오기 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
@@ -43,6 +45,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.factory(locator))
     val settings by viewModel.settings.collectAsState()
     val modelState by viewModel.modelState.collectAsState()
+    val selectedBackend by viewModel.selectedBackend.collectAsState()
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -113,6 +116,29 @@ fun SettingsScreen(onBack: () -> Unit) {
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(top = 24.dp),
             )
+
+            Text(
+                text = "실행 백엔드 (Gemma 4 E2B 기준)",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            ModelBackend.entries.forEach { backend ->
+                OutlinedButton(
+                    onClick = { viewModel.setModelBackend(backend) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    enabled = selectedBackend != backend,
+                ) {
+                    Text(backend.label())
+                }
+            }
+            Text(
+                text = "백엔드마다 모델 파일이 달라요. 전환 후에는 모델을 다시 다운로드해 주세요.",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(vertical = 4.dp),
+            )
+
             when (val state = modelState) {
                 is SettingsViewModel.ModelState.Active -> Text(
                     text = if (state.isLocal) {
@@ -151,7 +177,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                                 .padding(vertical = 8.dp),
                         )
                         Text(
-                            text = "모델 다운로드 중이에요. (약 1.3GB, Wi-Fi 권장)",
+                            text = "모델 다운로드 중이에요. (Wi-Fi 권장)",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -180,7 +206,10 @@ fun SettingsScreen(onBack: () -> Unit) {
                 enabled = modelState !is SettingsViewModel.ModelState.Downloading &&
                     modelState !is SettingsViewModel.ModelState.Importing,
             ) {
-                Text("모델 자동 다운로드 (Gemma 2B, 약 1.3GB)")
+                val target = com.woojik.ondeviceai.data.local.ModelDownloader.defaultModelFor(
+                    useGpu = selectedBackend == ModelBackend.GPU,
+                )
+                Text("모델 자동 다운로드 (Gemma 4 E2B, " + target.sizeGb + ")")
             }
             Button(
                 onClick = { importLauncher.launch(arrayOf("*/*")) },
@@ -190,7 +219,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 enabled = modelState !is SettingsViewModel.ModelState.Downloading &&
                     modelState !is SettingsViewModel.ModelState.Importing,
             ) {
-                Text("파일로 직접 가져오기 (.task/.bin/.gguf)")
+                Text("파일로 직접 가져오기 (.litertlm/.task/.bin/.gguf)")
             }
         }
     }
@@ -200,4 +229,9 @@ private fun DarkThemeMode.label(): String = when (this) {
     DarkThemeMode.FOLLOW_SYSTEM -> "시스템 설정 따르기"
     DarkThemeMode.LIGHT -> "라이트 모드"
     DarkThemeMode.DARK -> "다크 모드"
+}
+
+private fun ModelBackend.label(): String = when (this) {
+    ModelBackend.CPU -> "CPU (호환성 우선, 약 2.5GB)"
+    ModelBackend.GPU -> "GPU (빠른 응답, 약 1.9GB)"
 }

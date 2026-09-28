@@ -8,6 +8,13 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
+/** 백엔드별 기본 다운로드 대상. */
+data class ModelDownloadTarget(
+    val url: String,
+    val fileName: String,
+    val sizeGb: String,
+)
+
 /**
  * 로컬 모델을 기기 내부 저장소로 직접 다운로드한다.
  * PC/adb 없이 기기만으로 모델을 배치하기 위한 기본 경로 (PRD-02 실기 제약 대응).
@@ -91,13 +98,26 @@ class ModelDownloader(
 
     companion object {
         /**
-         * 기본 다운로드 대상: Gemma 2B IT CPU int4 (.bin, 약 1.3GB).
-         * 게이트 없는 공개 미러 저장소(ASahu16/gemma)이므로 로그인 없이
-         * 바로 다운로드 가능하다 (docs/model-candidates.md 1차 실측 후보).
+         * 기본 다운로드 대상: Gemma 4 E2B IT (LiteRT-LM .litertlm).
+         * litert-community 공식 저장소 (게이트 없음). 백엔드별로 다른 변형 파일을 쓴다.
+         * - CPU: gemma-4-E2B-it.litertlm (약 2.5GB)
+         * - GPU: gemma-4-E2B-it-gpu.litertlm (약 1.9GB)
          */
-        const val DEFAULT_MODEL_URL =
-            "https://huggingface.co/ASahu16/gemma/resolve/main/gemma-2b-it-cpu-int4.bin"
-        const val DEFAULT_MODEL_FILE_NAME = "gemma-2b-it-cpu-int4.bin"
+        const val CPU_MODEL_URL =
+            "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm"
+        const val CPU_MODEL_FILE_NAME = "gemma-4-E2B-it.litertlm"
+        const val GPU_MODEL_URL =
+            "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-gpu.litertlm"
+        const val GPU_MODEL_FILE_NAME = "gemma-4-E2B-it-gpu.litertlm"
+
+        /** 선택한 백엔드(CPU/GPU)에 맞는 기본 다운로드 대상을 반환한다. */
+        fun defaultModelFor(useGpu: Boolean): ModelDownloadTarget =
+            if (useGpu) {
+                ModelDownloadTarget(url = GPU_MODEL_URL, fileName = GPU_MODEL_FILE_NAME, sizeGb = "약 1.9GB")
+            } else {
+                ModelDownloadTarget(url = CPU_MODEL_URL, fileName = CPU_MODEL_FILE_NAME, sizeGb = "약 2.5GB")
+            }
+
         private const val TEMP_SUFFIX = ".downloading"
         private const val CONNECT_TIMEOUT_MILLIS = 30_000
         private const val READ_TIMEOUT_MILLIS = 60_000
