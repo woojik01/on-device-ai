@@ -13,7 +13,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -32,7 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.woojik.ondeviceai.OnDeviceAiApplication
 import com.woojik.ondeviceai.data.model.DarkThemeMode
 
-/** 설정 화면: 테마 모드 선택, 캐릭터 이름 변경, 로컬 모델 가져오기 */
+/** 설정 화면: 테마 모드 선택, 캐릭터 이름 변경, 로컬 모델 다운로드/가져오기 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
@@ -130,6 +132,38 @@ fun SettingsScreen(onBack: () -> Unit) {
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
+                is SettingsViewModel.ModelState.Downloading -> {
+                    if (state.progressPercent != null) {
+                        LinearProgressIndicator(
+                            progress = { state.progressPercent / 100f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                        )
+                        Text(
+                            text = "모델 다운로드 중이에요... " + state.progressPercent + "%",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    } else {
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                        )
+                        Text(
+                            text = "모델 다운로드 중이에요. (약 2.6GB, Wi-Fi 권장)",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = { viewModel.cancelDownload() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                    ) {
+                        Text("다운로드 취소")
+                    }
+                }
                 is SettingsViewModel.ModelState.Failed -> Text(
                     text = state.message,
                     color = MaterialTheme.colorScheme.error,
@@ -137,14 +171,26 @@ fun SettingsScreen(onBack: () -> Unit) {
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
             }
+
+            Button(
+                onClick = { viewModel.downloadModel() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                enabled = modelState !is SettingsViewModel.ModelState.Downloading &&
+                    modelState !is SettingsViewModel.ModelState.Importing,
+            ) {
+                Text("모델 자동 다운로드 (Gemma 4 E2B, 약 2.6GB)")
+            }
             Button(
                 onClick = { importLauncher.launch(arrayOf("*/*")) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
-                enabled = modelState !is SettingsViewModel.ModelState.Importing,
+                    .padding(top = 4.dp),
+                enabled = modelState !is SettingsViewModel.ModelState.Downloading &&
+                    modelState !is SettingsViewModel.ModelState.Importing,
             ) {
-                Text("모델 파일 가져오기 (.task/.bin/.gguf)")
+                Text("파일로 직접 가져오기 (.litertlm/.task/.bin/.gguf)")
             }
         }
     }

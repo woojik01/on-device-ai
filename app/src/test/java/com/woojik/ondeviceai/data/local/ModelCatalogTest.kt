@@ -26,19 +26,26 @@ class ModelCatalogTest {
     }
 
     @Test
+    fun `litertlm 모델 파일을 인식한다`() {
+        tempDir.newFile("gemma.litertlm")
+        val catalog = ModelCatalog(tempDir.root)
+        assertEquals("gemma.litertlm", catalog.findModelFile()?.name)
+    }
+
+    @Test
     fun `여러 모델이 있으면 가장 최근 파일을 선택한다`() {
         val older = tempDir.newFile("old-model.task")
-        val newer = tempDir.newFile("new-model.gguf")
+        val newer = tempDir.newFile("new-model.litertlm")
         older.setLastModified(1_000L)
         newer.setLastModified(2_000L)
         val catalog = ModelCatalog(tempDir.root)
-        assertEquals("new-model.gguf", catalog.findModelFile()?.name)
+        assertEquals("new-model.litertlm", catalog.findModelFile()?.name)
     }
 
     @Test
     fun `대문자 확장자도 인식한다`() {
-        tempDir.newFile("MODEL.TASK")
+        tempDir.newFile("MODEL.LITERTLM")
         val catalog = ModelCatalog(tempDir.root)
-        assertEquals("MODEL.TASK", catalog.findModelFile()?.name)
+        assertEquals("MODEL.LITERTLM", catalog.findModelFile()?.name)
     }
 }

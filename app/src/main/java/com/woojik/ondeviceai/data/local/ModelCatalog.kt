@@ -4,7 +4,8 @@ import java.io.File
 
 /**
  * 기기 내부 저장소에서 로컬 모델 파일을 찾는다.
- * MediaPipe LLM Inference 0.10.35가 지원하는 형식: .task / .bin / .gguf
+ * - .litertlm : LiteRT-LM (1차 후보 런타임)
+ * - .task / .bin / .gguf : MediaPipe LLM Inference 0.10.35 (2차 후보)
  */
 class ModelCatalog(
     private val modelsDir: File,
@@ -18,6 +19,7 @@ class ModelCatalog(
 
     companion object {
         const val MODELS_DIR_NAME = "models"
-        val SUPPORTED_EXTENSIONS = setOf("task", "bin", "gguf")
+        const val EXT_LITERTLM = "litertlm"
+        val SUPPORTED_EXTENSIONS = setOf(EXT_LITERTLM, "task", "bin", "gguf")
     }
 }
