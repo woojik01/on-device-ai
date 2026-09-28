@@ -2,6 +2,7 @@ package com.woojik.ondeviceai
 
 import android.app.Application
 import com.woojik.ondeviceai.data.local.AppPreferences
+import com.woojik.ondeviceai.data.local.CrashReporter
 import com.woojik.ondeviceai.data.local.DataStoreAppPreferences
 import com.woojik.ondeviceai.data.local.ChatStore
 import com.woojik.ondeviceai.data.local.DataStoreChatStore
@@ -98,6 +99,8 @@ class OnDeviceAiApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // 비정상 종료 시 기기 내 로그를 남긴다 (adb 없는 실기 디버깅용).
+        CrashReporter.install(filesDir)
         locator = ServiceLocator(this)
         // 저장된 백엔드 설정(CPU/GPU)을 모델 로드에 반영한다.
         appScope.launch {

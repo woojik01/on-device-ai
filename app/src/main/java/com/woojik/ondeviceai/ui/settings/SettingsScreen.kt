@@ -3,10 +3,11 @@ package com.woojik.ondeviceai.ui.settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
@@ -30,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.woojik.ondeviceai.OnDeviceAiApplication
@@ -46,6 +48,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val settings by viewModel.settings.collectAsState()
     val modelState by viewModel.modelState.collectAsState()
     val selectedBackend by viewModel.selectedBackend.collectAsState()
+    val crashLog by viewModel.crashLog.collectAsState()
 
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
@@ -57,6 +60,8 @@ fun SettingsScreen(onBack: () -> Unit) {
     LaunchedEffect(settings.characterName) {
         nameInput = settings.characterName
     }
+    // 화면에 다시 들어오면 크래시 로그를 갱신한다.
+    LaunchedEffect(Unit) { viewModel.refreshCrashLog() }
 
     Scaffold(
         topBar = {
@@ -77,7 +82,8 @@ fun SettingsScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
         ) {
             Text("테마", style = MaterialTheme.typography.titleLarge)
             DarkThemeMode.entries.forEach { mode ->
@@ -220,6 +226,30 @@ fun SettingsScreen(onBack: () -> Unit) {
                     modelState !is SettingsViewModel.ModelState.Importing,
             ) {
                 Text("파일로 직접 가져오기 (.litertlm/.task/.bin/.gguf)")
+            }
+
+            if (crashLog != null) {
+                Text(
+                    text = "마지막 비정상 종료 로그",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 24.dp),
+                )
+                Text(
+                    text = crashLog,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+                OutlinedButton(
+                    onClick = { viewModel.clearCrashLog() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                ) {
+                    Text("크래시 로그 지우기")
+                }
             }
         }
     }

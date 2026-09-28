@@ -5,8 +5,10 @@ import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flowOn
 import java.io.File
 
 /**
@@ -14,10 +16,12 @@ import java.io.File
  * 백엔드로 CPU/GPU를 선택할 수 있다 (GPU는 OpenCL 기반, 기기 미지원 시 로드 실패 → 설정에서 CPU로 전환).
  *
  * API 흐름 (litertlm-android, 공식 Kotlin API):
- * 1. Engine(EngineConfig(modelPath, backend, cacheDir)) + initialize() — 첫 로드에 수 초 소요
+ * 1. Engine(EngineConfig(modelPath, backend, cacheDir)) + initialize() — 첫 로드에 수 초 이상 소요
  * 2. engine.createConversation() — 요청마다 새 대화 (프롬프트에 컨텍스트 포함)
  * 3. conversation.sendMessageAsync(prompt): Flow<Message> — 증분 텍스트 스트리밍
  *
+ * - 엔진 초기화와 생성은 모두 백그라운드(Default) 스레드에서 실행한다.
+ *   2.5GB급 모델 로드는 수 초 이상 걸리므로 메인 스레드에서 실행하면 ANR로 앱이 종료된다.
  * - 모델 파일 다운로드만 외부 네트워크를 쓰고 대화·기억은 절대 전송하지 않는다 (PRD 데이터 원칙).
  */
 class LiteRtModel(
@@ -34,6 +38,7 @@ class LiteRtModel(
     @Volatile
     private var engine: Engine? = null
 
+    /** flowOn(Default): 엔진 로드/추론을 메인 스레드가 아닌 곳에서 실행한다 (ANR 방지). */
     override fun generate(request: GenerationRequest): Flow<ChatModelEvent> = callbackFlow {
         val prompt = PromptBuilder.build(request)
 
@@ -67,7 +72,7 @@ class LiteRtModel(
             trySend(ChatModelEvent.Failed(GenerationError.GENERATION_FAILED))
         }
         close()
-    }
+    }.flowOn(Dispatchers.Default)
 
     /** 로딩/생성 실패 후 재시도할 수 있도록 로드된 엔진을 정리한다. */
     fun reset() {

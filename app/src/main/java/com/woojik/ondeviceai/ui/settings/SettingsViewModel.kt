@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.woojik.ondeviceai.ServiceLocator
+import com.woojik.ondeviceai.data.local.CrashReporter
 import com.woojik.ondeviceai.data.local.ModelDownloader
 import com.woojik.ondeviceai.data.local.ModelImporter
 import com.woojik.ondeviceai.data.model.AppSettings
@@ -45,6 +46,10 @@ class SettingsViewModel(
     private val _selectedBackend = MutableStateFlow(ModelBackend.CPU)
     val selectedBackend: StateFlow<ModelBackend> = _selectedBackend.asStateFlow()
 
+    /** 마지막 비정상 종료 로그 (기기 내 저장, 외부 전송 없음). */
+    private val _crashLog = MutableStateFlow<String?>(null)
+    val crashLog: StateFlow<String?> = _crashLog.asStateFlow()
+
     init {
         viewModelScope.launch {
             repository.observeSettings()
@@ -52,6 +57,7 @@ class SettingsViewModel(
                 .distinctUntilChanged()
                 .collect { backend -> _selectedBackend.value = backend }
         }
+        refreshCrashLog()
     }
 
     private val _modelState = MutableStateFlow<ModelState>(currentModelState())
@@ -72,6 +78,19 @@ class SettingsViewModel(
         _selectedBackend.value = backend
         viewModelScope.launch { repository.setModelBackend(backend) }
         locator?.setModelBackend(backend)
+    }
+
+    /** 마지막 크래시 로그를 다시 읽는다. */
+    fun refreshCrashLog() {
+        val loc = locator ?: return
+        _crashLog.value = loc.let { CrashReporter.readLast(it.applicationFilesDir()) }
+    }
+
+    /** 크래시 로그를 비운다. */
+    fun clearCrashLog() {
+        val loc = locator ?: return
+        CrashReporter.clear(loc.applicationFilesDir())
+        _crashLog.value = null
     }
 
     /** 선택한 모델 파일을 앱 내부로 복사하고 모델을 교체한다. */
