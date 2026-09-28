@@ -25,6 +25,7 @@ import java.io.File
  * 3. conversation.sendMessageAsync(prompt): Flow<Message> — 스트리밍 응답
  * 4. 수집 취소 시 코루틴 취소로 전파되며 Conversation이 정리된다.
  *
+ * - Message에서 텍스트는 toString()(Contents 결합)으로 추출한다 (0.16.1에는 text 프로퍼티가 없음).
  * - 스트림이 증분(토큰 조각) 또는 누적 텍스트 중 어느 쪽으로 방출돼도 동작하도록 방어적으로 처리한다.
  * - engine.initialize()는 수 초 이상 걸릴 수 있어 Dispatchers.IO에서 실행한다.
  */
@@ -57,8 +58,8 @@ class LiteRtModel(
             val accumulated = StringBuilder()
             try {
                 conv.sendMessageAsync(request.userInput).collect { message ->
-                    val text = message.text
-                    if (text.isNullOrEmpty()) return@collect
+                    val text = message.toString()
+                    if (text.isEmpty()) return@collect
                     val current = accumulated.toString()
                     // 누적 텍스트로 방출되는 경우: 앞 부분이 지금까지의 누적과 같으면 새로 늘어난 부분만 방출.
                     // 증분(토큰 조각)으로 방출되는 경우: 전체를 delta로 방출한다.
