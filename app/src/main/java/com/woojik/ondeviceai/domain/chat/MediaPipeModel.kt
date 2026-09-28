@@ -48,14 +48,16 @@ class MediaPipeModel(
 
         try {
             session.addQueryChunk(prompt)
-            val future = session.generateResponseAsync { partial ->
+            val future = session.generateResponseAsync { partial, done ->
                 if (partial.isNotEmpty()) {
                     trySend(ChatModelEvent.Token(partial))
                 }
+                if (done) {
+                    trySend(ChatModelEvent.Completed(partial))
+                    close()
+                }
             }
             future.get()
-            trySend(ChatModelEvent.Completed(""))
-            close()
         } catch (e: OutOfMemoryError) {
             trySend(ChatModelEvent.Failed(GenerationError.OUT_OF_MEMORY))
             close()
