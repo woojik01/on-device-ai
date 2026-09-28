@@ -10,6 +10,8 @@ jobs:
   build-and-test:
     name: Build & Unit Test
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -25,7 +27,10 @@ jobs:
           gradle-version: "8.7"
 
       - name: Unit tests
-        run: gradle testDebugUnitTest --no-daemon
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle testDebugUnitTest --no-daemon 2>&1 | tee gradle-output.log
 
       - name: Publish failed test details
         if: failure()
@@ -45,6 +50,24 @@ jobs:
         with:
           name: test-results
           path: app/build/test-results
+
+      - name: Post failure log to PR
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let log = '';
+            try { log = fs.readFileSync('gradle-output.log', 'utf8'); } catch (e) { log = 'log not found: ' + e.message; }
+            const errLines = log.split('\n').filter(l => l.startsWith('e: ') || l.includes('FAILURE: Build failed') || l.includes('What went wrong')).slice(0, 40);
+            const tail = log.slice(-8000);
+            const body = '### CI 실패 로그 자동 게시\n\n**오류 요약:**\n```\n' + errLines.join('\n').slice(0, 3000) + '\n```\n\n**로그 마지막 부분:**\n```\n' + tail.slice(0, 4000) + '\n```';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
 
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon
