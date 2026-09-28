@@ -36,6 +36,9 @@ class ServiceLocator(private val application: Application) {
     val chatRepository: ChatRepository = ChatRepository(chatStore)
     val settingsRepository: SettingsRepository = SettingsRepository(appPreferences)
 
+    /** 크래시 로그 등 앱 내부 파일 접근용. */
+    fun applicationFilesDir(): File = application.filesDir
+
     private val modelsDir = File(application.filesDir, ModelCatalog.MODELS_DIR_NAME)
     private val modelCatalog = ModelCatalog(modelsDir)
 
