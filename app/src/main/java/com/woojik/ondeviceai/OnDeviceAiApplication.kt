@@ -50,8 +50,7 @@ class ServiceLocator(private val application: Application) {
         chatModel = loadModel()
     }
 
-    private fun load
-Model(): ChatModel =
+    private fun loadModel(): ChatModel =
         modelCatalog.findModelFile()
             ?.let { MediaPipeModel(application, it.absolutePath) }
             ?: EchoModel()
