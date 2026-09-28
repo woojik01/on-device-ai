@@ -4,7 +4,7 @@ import java.io.File
 
 /**
  * 기기 내부 저장소에서 로컬 모델 파일을 찾는다.
- * 모델 바이너리는 용량 문제로 Git에 커밋하지 않고 adb로 배치한다 (docs/model-setup.md).
+ * MediaPipe LLM Inference 0.10.35가 지원하는 형식: .task / .bin / .gguf
  */
 class ModelCatalog(
     private val modelsDir: File,
@@ -18,6 +18,6 @@ class ModelCatalog(
 
     companion object {
         const val MODELS_DIR_NAME = "models"
-        val SUPPORTED_EXTENSIONS = setOf("task")
+        val SUPPORTED_EXTENSIONS = setOf("task", "bin", "gguf")
     }
 }

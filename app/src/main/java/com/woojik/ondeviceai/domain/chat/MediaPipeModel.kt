@@ -8,7 +8,17 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import java.io.File
 
-/** MediaPipe LLM Inference 기반 로컬 모델 구현. */
+/**
+ * MediaPipe LLM Inference 기반 로컬 모델 구현 (PRD-02 1차 후보 런타임, tasks-genai 0.10.35).
+ *
+ * API 흐름 (0.10.35 세션 API):
+ * 1. `session.addQueryChunk(prompt)` — 프롬프트 적재
+ * 2. `session.generateResponseAsync(progressListener)` — 부분 결과 콜백 (누적 텍스트 전달)
+ * 3. 수집 취소 시 `cancelGenerateResponseAsync()` + 세션 close
+ *
+ * - 콜백은 누적 부분 결과를 주므로 증분만 잘라 Token으로 방출한다.
+ * - 완료(done)는 콜백으로만 처리하고 future를 blocking get 하지 않는다 (취소 즉시 반응).
+ */
 class MediaPipeModel(
     private val context: Context,
     private val modelPath: String,
@@ -46,18 +56,20 @@ class MediaPipeModel(
             return@callbackFlow
         }
 
+        // 진행 콜백은 누적 결과를 전달하므로 이번에 새로 늘어난 부분만 방출한다.
+        var emittedLength = 0
         try {
             session.addQueryChunk(prompt)
-            val future = session.generateResponseAsync { partial, done ->
-                if (partial.isNotEmpty()) {
-                    trySend(ChatModelEvent.Token(partial))
+            session.generateResponseAsync { partial, done ->
+                if (partial.isNotEmpty() && partial.length > emittedLength) {
+                    trySend(ChatModelEvent.Token(partial.substring(emittedLength)))
+                    emittedLength = partial.length
                 }
                 if (done) {
                     trySend(ChatModelEvent.Completed(partial))
                     close()
                 }
             }
-            future.get()
         } catch (e: OutOfMemoryError) {
             trySend(ChatModelEvent.Failed(GenerationError.OUT_OF_MEMORY))
             close()
@@ -66,11 +78,14 @@ class MediaPipeModel(
             close()
         }
 
+        // 완료는 콜백으로 처리한다. 여기서는 취소 대기만 한다.
         awaitClose {
+            runCatching { session.cancelGenerateResponseAsync() }
             runCatching { session.close() }
         }
     }
 
+    /** 로딩/생성 실패 후 재시도할 수 있도록 로드된 런타임을 정리한다. */
     fun reset() {
         synchronized(inferenceLock) {
             runCatching { inference?.close() }
