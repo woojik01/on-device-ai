@@ -13,7 +13,6 @@ import com.woojik.ondeviceai.data.repository.SettingsRepository
 import com.woojik.ondeviceai.domain.chat.ChatModel
 import com.woojik.ondeviceai.domain.chat.ConversationEngine
 import com.woojik.ondeviceai.domain.chat.EchoModel
-import com.woojik.ondeviceai.domain.chat.LiteRtModel
 import com.woojik.ondeviceai.domain.chat.MediaPipeModel
 import java.io.File
 
@@ -38,8 +37,7 @@ class ServiceLocator(private val application: Application) {
     val modelDownloader = ModelDownloader(modelsDir)
 
     /**
-     * 기기 내부 저장소의 로컬 모델을 확장자에 맞는 런타임으로 구동한다.
-     * .litertlm → LiteRT-LM (1차 후보), .task/.bin/.gguf → MediaPipe LLM Inference (2차 후보).
+     * 기기 내부 저장소의 로컬 모델을 MediaPipe LLM Inference로 구동한다.
      * 모델이 없으면 개발용 EchoModel로 폴백한다 (docs/model-setup.md).
      */
     var chatModel: ChatModel = loadModel()
@@ -57,12 +55,9 @@ class ServiceLocator(private val application: Application) {
     }
 
     private fun loadModel(): ChatModel =
-        modelCatalog.findModelFile()?.let { file ->
-            when (file.extension.lowercase()) {
-                ModelCatalog.EXT_LITERTLM -> LiteRtModel(application, file.absolutePath)
-                else -> MediaPipeModel(application, file.absolutePath)
-            }
-        } ?: EchoModel()
+        modelCatalog.findModelFile()
+            ?.let { file -> MediaPipeModel(application, file.absolutePath) }
+            ?: EchoModel()
 }
 
 class OnDeviceAiApplication : Application() {

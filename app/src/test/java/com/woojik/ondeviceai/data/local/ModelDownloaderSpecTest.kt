@@ -20,7 +20,7 @@ class ModelDownloaderSpecTest {
     fun `기본 다운로드 대상은 https URL과 파일명을 가진다`() {
         assertTrue(ModelDownloader.DEFAULT_MODEL_URL.startsWith("https://"))
         assertTrue(ModelDownloader.DEFAULT_MODEL_FILE_NAME.isNotBlank())
-        assertTrue(ModelDownloader.DEFAULT_MODEL_FILE_NAME.endsWith(".litertlm"))
+        assertTrue(ModelDownloader.DEFAULT_MODEL_FILE_NAME.endsWith(".bin"))
     }
 
     @Test

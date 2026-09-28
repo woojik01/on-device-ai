@@ -151,7 +151,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                                 .padding(vertical = 8.dp),
                         )
                         Text(
-                            text = "모델 다운로드 중이에요. (약 2.6GB, Wi-Fi 권장)",
+                            text = "모델 다운로드 중이에요. (약 1.3GB, Wi-Fi 권장)",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -180,7 +180,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 enabled = modelState !is SettingsViewModel.ModelState.Downloading &&
                     modelState !is SettingsViewModel.ModelState.Importing,
             ) {
-                Text("모델 자동 다운로드 (Gemma 4 E2B, 약 2.6GB)")
+                Text("모델 자동 다운로드 (Gemma 2B, 약 1.3GB)")
             }
             Button(
                 onClick = { importLauncher.launch(arrayOf("*/*")) },
@@ -190,7 +190,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 enabled = modelState !is SettingsViewModel.ModelState.Downloading &&
                     modelState !is SettingsViewModel.ModelState.Importing,
             ) {
-                Text("파일로 직접 가져오기 (.litertlm/.task/.bin/.gguf)")
+                Text("파일로 직접 가져오기 (.task/.bin/.gguf)")
             }
         }
     }

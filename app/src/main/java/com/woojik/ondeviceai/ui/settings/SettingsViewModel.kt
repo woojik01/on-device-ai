@@ -62,7 +62,7 @@ class SettingsViewModel(
                     _modelState.value = ModelState.Failed(
                         when (result.reason) {
                             ModelImporter.Reason.UNSUPPORTED_EXTENSION ->
-                                "지원하지 않는 파일 형식이에요. .litertlm / .task / .bin / .gguf 파일을 선택해 주세요."
+                                "지원하지 않는 파일 형식이에요. .task / .bin / .gguf 파일을 선택해 주세요."
                             ModelImporter.Reason.IO_ERROR ->
                                 "모델 파일을 복사하지 못했어요. 저장 공간이 충분한지 확인해 주세요."
                         },
@@ -72,7 +72,7 @@ class SettingsViewModel(
         }
     }
 
-    /** 기본 후보 모델(Gemma 4 E2B, .litertlm)을 기기로 직접 다운로드하고 교체한다. */
+    /** 기본 후보 모델(Gemma 2B int4, 약 1.3GB)을 기기로 직접 다운로드하고 교체한다. */
     fun downloadModel() {
         val loc = locator ?: return
         if (downloadJob?.isActive == true) return
@@ -93,7 +93,7 @@ class SettingsViewModel(
                                 ModelDownloader.Reason.NETWORK_ERROR ->
                                     "모델 다운로드에 실패했어요. 네트워크 연결(Wi-Fi 권장)을 확인해 주세요."
                                 ModelDownloader.Reason.IO_ERROR ->
-                                    "모델을 저장하지 못했어요. 저장 공간이 충분한지(약 3GB 이상) 확인해 주세요."
+                                    "모델을 저장하지 못했어요. 저장 공간이 충분한지(약 1.5GB 이상) 확인해 주세요."
                             },
                         )
                     }

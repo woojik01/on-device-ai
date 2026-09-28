@@ -91,13 +91,13 @@ class ModelDownloader(
 
     companion object {
         /**
-         * 1차 실측 대상: Gemma 4 E2B IT (LiteRT-LM 전용 .litertlm, 약 2.6GB).
-         * litert-community 공식 저장소 (Apache-2.0), 로그인 없이 다운로드 가능한
-         * 게이트 없는 후보 (docs/model-candidates.md).
+         * 기본 다운로드 대상: Gemma 2B IT CPU int4 (.bin, 약 1.3GB).
+         * 게이트 없는 공개 미러 저장소(ASahu16/gemma)이므로 로그인 없이
+         * 바로 다운로드 가능하다 (docs/model-candidates.md 1차 실측 후보).
          */
         const val DEFAULT_MODEL_URL =
-            "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm"
-        const val DEFAULT_MODEL_FILE_NAME = "gemma-4-E2B-it.litertlm"
+            "https://huggingface.co/ASahu16/gemma/resolve/main/gemma-2b-it-cpu-int4.bin"
+        const val DEFAULT_MODEL_FILE_NAME = "gemma-2b-it-cpu-int4.bin"
         private const val TEMP_SUFFIX = ".downloading"
         private const val CONNECT_TIMEOUT_MILLIS = 30_000
         private const val READ_TIMEOUT_MILLIS = 60_000
